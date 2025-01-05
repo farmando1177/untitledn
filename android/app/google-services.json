@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "6874970823",
+    "project_id": "ecowize-3a880",
+    "storage_bucket": "ecowize-3a880.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:6874970823:android:4ea1482112ee751a8fdce2",
+        "android_client_info": {
+          "package_name": "com.example.EcoWize"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwG8VtESNsWBLf5uGVgQY7Oz26GOMDH1M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
