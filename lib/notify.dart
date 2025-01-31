@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class DarkMode with ChangeNotifier {
-  bool darkMode = true; // الوضع الافتراضي
+  bool darkMode = false; // الوضع الافتراضي
 
   void changemode() {
     darkMode = !darkMode;

@@ -1,0 +1,35 @@
+{
+  "flutter": {
+    "platforms": {
+      "ios": {
+        "default": {
+          "projectId": "ecowize2",
+          "appId": "1:301610563638:ios:ea7ed362f689800a81c097",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "ecowize2",
+          "configurations": {
+            "ios": "1:301610563638:ios:ea7ed362f689800a81c097",
+            "web": "1:301610563638:web:1d9f35ed698a4a2181c097"
+          }
+        }
+      },
+      "macos": {
+        "default": {
+          "projectId": "ecowize-3a880",
+          "appId": "1:6874970823:ios:b070d5e015907f2f8fdce2",
+          "uploadDebugSymbols": false,
+          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}

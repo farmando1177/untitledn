@@ -31,6 +31,12 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSUSBUsageDescription</key>
+	<string>Your app needs access to USB devices.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Your location is needed for Google Maps</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location is needed for Google Maps</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>We use this to provide personalized notifications.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
@@ -57,5 +63,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>io.flutter.embedded_views_preview</key>
+	<true/>
 </dict>
 </plist>

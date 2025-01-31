@@ -1,58 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SupportPage extends StatelessWidget {
   const SupportPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final nameController = TextEditingController();
+    final emailController = TextEditingController();
+    final messageController = TextEditingController();
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Support'),
-        backgroundColor: Colors.green,
-      ),
+
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView(
           children: [
-            // العنوان
             const Text(
               'Frequently Asked Questions (FAQ)',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 15),
 
-            // الأسئلة والأجوبة
-            _faqItem(
-              question: 'How do I reset my password?',
-              answer:
-              'To reset your password, click on "Forgot Password" on the login page.',
-            ),
-            _faqItem(
-              question: 'How can I update my profile?',
-              answer:
-              'Go to your profile page and click "Edit Profile" to update your information.',
-            ),
             _faqItem(
               question: 'How do I contact support?',
               answer:
               'You can reach out to support via the contact form or email us at support@ecowize.com.',
             ),
             const SizedBox(height: 40),
-
-            // نموذج التواصل
             const Text(
               'Contact Us',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            _contactForm(context),
+            _contactForm(
+                context, nameController, emailController, messageController),
           ],
         ),
       ),
     );
   }
 
-  // عنصر للسؤال والإجابة في الأسئلة الشائعة
   Widget _faqItem({required String question, required String answer}) {
     return Card(
       elevation: 4,
@@ -77,8 +65,8 @@ class SupportPage extends StatelessWidget {
     );
   }
 
-  // نموذج للتواصل مع الدعم
-  Widget _contactForm(BuildContext context) {
+  Widget _contactForm(BuildContext context, TextEditingController nameController,
+      TextEditingController emailController, TextEditingController messageController) {
     return Card(
       elevation: 4,
       child: Padding(
@@ -88,8 +76,9 @@ class SupportPage extends StatelessWidget {
           children: [
             const Text('Your Name:', style: TextStyle(fontSize: 16)),
             const SizedBox(height: 8),
-            const TextField(
-              decoration: InputDecoration(
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
                 hintText: 'Enter your name',
                 border: OutlineInputBorder(),
               ),
@@ -97,8 +86,9 @@ class SupportPage extends StatelessWidget {
             const SizedBox(height: 15),
             const Text('Email Address:', style: TextStyle(fontSize: 16)),
             const SizedBox(height: 8),
-            const TextField(
-              decoration: InputDecoration(
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(
                 hintText: 'Enter your email',
                 border: OutlineInputBorder(),
               ),
@@ -106,20 +96,45 @@ class SupportPage extends StatelessWidget {
             const SizedBox(height: 15),
             const Text('Message:', style: TextStyle(fontSize: 16)),
             const SizedBox(height: 8),
-            const TextField(
+            TextField(
+              controller: messageController,
               maxLines: 3,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'Enter your message',
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
-                // تنفيذ عملية إرسال النموذج
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Message Sent')),
-                );
+              onPressed: () async {
+                final name = nameController.text;
+                final email = emailController.text;
+                final message = messageController.text;
+
+                if (name.isNotEmpty && email.isNotEmpty && message.isNotEmpty) {
+                  try {
+                    await FirebaseFirestore.instance.collection('support_messages').add({
+                      'name': name,
+                      'email': email,
+                      'message': message,
+                      'timestamp': FieldValue.serverTimestamp(),
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Message Sent')),
+                    );
+                    nameController.clear();
+                    emailController.clear();
+                    messageController.clear();
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Failed to send message')),
+                    );
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please fill in all fields')),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,

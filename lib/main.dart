@@ -1,92 +1,106 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'pages/sign_up_page.dart';   // استيراد صفحة التسجيل
-import 'pages/sign_in_page.dart';   // استيراد صفحة تسجيل الدخول
+import 'firebase_options.dart'; // تأكد من وجود هذا الملف
 import 'pages/notification_service.dart'; // استيراد NotificationService
+import 'notify.dart'; // استيراد ملف DarkMode
+import 'package:provider/provider.dart';
+import 'pages/SplashScreenPage.dart';
+//import 'pages/HomePage.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:intl/intl.dart';
+
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+FlutterLocalNotificationsPlugin();
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // تأكد من أن Flutter جاهز
-  await Firebase.initializeApp(); // تهيئة Firebase
-  await NotificationService.init();  // تهيئة الإشعارات
-  runApp(MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.web, // خيارات Firebase
+  );
+
+  // معالجة الإشعارات عند تشغيل التطبيق في الخلفية
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  await NotificationService.init(); // تهيئة الإشعارات
+
+  // تهيئة الإشعارات المحلية
+  await initLocalNotifications();
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => DarkMode(),
+      child: const MyApp(),
+    ),
+  );
+}
+
+// دالة لتلقي الإشعارات في الخلفية
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  print("Received notification: ${message.notification?.title}");
+}
+
+// تهيئة الإشعارات المحلية
+Future<void> initLocalNotifications() async {
+  tz.initializeTimeZones();
+  const AndroidInitializationSettings androidSettings =
+  AndroidInitializationSettings('@mipmap/ic_launcher');
+  final InitializationSettings settings =
+  InitializationSettings(android: androidSettings);
+  await flutterLocalNotificationsPlugin.initialize(settings);
+}
+
+Future<void> scheduleWasteCollectionNotification(
+    String area, String day, String time) async {
+  DateTime now = DateTime.now();
+  DateTime scheduledTime = DateFormat('hh:mm a').parse(time);
+  DateTime notificationTime = DateTime(
+      now.year, now.month, now.day, scheduledTime.hour, scheduledTime.minute);
+
+  if (notificationTime.isBefore(now)) {
+    notificationTime = notificationTime.add(Duration(days: 1));
+  }
+
+  await flutterLocalNotificationsPlugin.zonedSchedule(
+    0,
+    "Waste Collection Reminder",
+    "Trash collection for $area is scheduled at $time on $day.",
+    tz.TZDateTime.from(notificationTime, tz.local),
+    const NotificationDetails(
+      android: AndroidNotificationDetails(
+        'waste_channel',
+        'Waste Collection',
+        channelDescription: 'Reminds about waste collection',
+        importance: Importance.high,
+        priority: Priority.high,
+      ),
+    ),
+    androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, // ✅ Fix
+    uiLocalNotificationDateInterpretation:
+    UILocalNotificationDateInterpretation.absoluteTime,
+  );
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
+    final thmode = Provider.of<DarkMode>(context);
+
     return MaterialApp(
       title: 'EcoWize',
-      home: WelcomePage(), // تعيين صفحة الترحيب كصفحة البداية
-    );
-  }
-}
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
+      themeMode: thmode.darkMode ? ThemeMode.dark : ThemeMode.light,
 
-class WelcomePage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset('assets/images/logoo.png', height: 280, width: 280),
-              SizedBox(height: 40),
-              Text(
-                'Welcome to',
-                style: TextStyle(
-                  fontSize: 30,
-                  color: Colors.green,
-                ),
-              ),
-              Text(
-                'EcoWize',
-                style: TextStyle(
-                  fontSize: 45,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF43A047),
-                ),
-              ),
-              SizedBox(height: 50),
-              ElevatedButton(
-                onPressed: () {
-                  // Navigate to Sign Up page
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => SignUpPage()),
-                  );
-                  NotificationService.showNotification(); // عرض الإشعار بعد الانتقال
-                },
-                child: Text('SIGN UP', style: TextStyle(color: Colors.white)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF4CAF50),
-                  padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
-                  textStyle: TextStyle(fontSize: 18),
-                ),
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  // Navigate to Sign In page
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => SignInPage()),
-                  );
-                  NotificationService.showNotification(); // عرض الإشعار بعد الانتقال
-                },
-                child: Text('SIGN IN', style: TextStyle(color: Colors.white)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF66BB6A),
-                  padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
-                  textStyle: TextStyle(fontSize: 18),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+
+      //home: const HomePage(),
+      home: const SplashScreen(),
+
     );
   }
 }

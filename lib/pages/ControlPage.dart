@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:location/location.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ControlPage extends StatefulWidget {
   const ControlPage({super.key});
@@ -10,84 +12,141 @@ class ControlPage extends StatefulWidget {
 
 class _ControlPageState extends State<ControlPage> {
   late GoogleMapController mapController;
-
-  // النقاط التي تمثل الحاويات والطائرات
-  final Set<Marker> _markers = {};
-
-  // إعدادات الخريطة
-  static const LatLng _center =
-  LatLng(37.7749, -122.4194); // تحديد موقع البداية (مثل سان فرانسيسكو)
+  Set<Marker> _markers = {};
+  Set<Polyline> _polylines = {};
+  LatLng _currentLocation = const LatLng(21.3891, 39.8579); // مكة الموقع الافتراضي
+  MapType _currentMapType = MapType.normal; // نوع الخريطة الافتراضي
+  final CollectionReference binsCollection = FirebaseFirestore.instance.collection('waste_bins');
 
   @override
   void initState() {
     super.initState();
-
-    // إضافة نقاط الحاويات والطائرات
-    _markers.add(
-      const Marker(
-        markerId: MarkerId('waste_bin_1'),
-        position: LatLng(37.7749, -122.4194), // موقع الحاوية
-        infoWindow: InfoWindow(title: 'Waste Bin 1', snippet: 'Full'),
-      ),
-    );
-    _markers.add(
-      const Marker(
-        markerId: MarkerId('drone_1'),
-        position: LatLng(37.7750, -122.4200), // موقع الطائرة
-        infoWindow: InfoWindow(title: 'Drone 1', snippet: 'In transit'),
-      ),
-    );
-    _markers.add(
-      const Marker(
-        markerId: MarkerId('drone_2'),
-        position: LatLng(37.7751, -122.4195), // موقع طائرة أخرى
-        infoWindow: InfoWindow(title: 'Drone 2', snippet: 'Returning'),
-      ),
-    );
+    _getCurrentLocation();
+    _loadBinsFromFirebase();
   }
 
-  // دالة لتحديد الخريطة
-  void _onMapCreated(GoogleMapController controller) {
-    mapController = controller;
+  /// 📌 **الحصول على الموقع الحالي**
+  Future<void> _getCurrentLocation() async {
+    Location location = Location();
+    try {
+      LocationData locationData = await location.getLocation();
+      setState(() {
+        _currentLocation = LatLng(locationData.latitude!, locationData.longitude!);
+      });
+      _moveCamera(_currentLocation);
+    } catch (e) {
+      print("Error getting location: $e");
+    }
+  }
+
+  /// 📌 **تحميل الحاويات من Firestore عند تشغيل التطبيق**
+  void _loadBinsFromFirebase() {
+    binsCollection.snapshots().listen((snapshot) {
+      setState(() {
+        _markers.clear();
+        for (var doc in snapshot.docs) {
+          var data = doc.data() as Map<String, dynamic>;
+          _markers.add(
+            Marker(
+              markerId: MarkerId(doc.id),
+              position: LatLng(data['lat'], data['lng']),
+              draggable: true, // ✅ يمكن سحبه
+              onDragEnd: (newPosition) {
+                _updateBinLocation(doc.id, newPosition);
+              },
+              onTap: () {
+                _deleteBin(doc.id);
+              },
+              infoWindow: InfoWindow(title: 'Waste Bin', snippet: 'Status: ${data['status']}'),
+              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+            ),
+          );
+        }
+      });
+    });
+  }
+
+  /// 📌 **تحديث موقع الحاوية في Firebase عند سحبها**
+  Future<void> _updateBinLocation(String id, LatLng newPosition) async {
+    await binsCollection.doc(id).update({'lat': newPosition.latitude, 'lng': newPosition.longitude});
+  }
+
+  /// 📌 **حذف الحاوية عند الضغط عليها**
+  Future<void> _deleteBin(String id) async {
+    await binsCollection.doc(id).delete();
+  }
+
+  /// 📌 **حفظ الحاوية إلى Firestore**
+  Future<void> _saveBinToFirebase(LatLng position) async {
+    await binsCollection.add({'lat': position.latitude, 'lng': position.longitude, 'status': 'New'});
+  }
+
+  /// 📌 **إضافة ماركر عند النقر مع الحفظ في Firebase**
+  void _onMapTapped(LatLng tappedPoint) async {
+    await _saveBinToFirebase(tappedPoint);
+  }
+
+  /// 📌 **إضافة خط بين الحاويات**
+  void _addPolyline() {
+    if (_markers.length < 2) return; // تأكد من وجود نقطتين على الأقل
+    setState(() {
+      _polylines.add(
+        Polyline(
+          polylineId: const PolylineId("route"),
+          points: _markers.map((m) => m.position).toList(),
+          color: Colors.blue,
+          width: 4,
+        ),
+      );
+    });
+  }
+
+  /// 📌 **تغيير نوع الخريطة بين عادي وقمر صناعي**
+  void _toggleMapType() {
+    setState(() {
+      _currentMapType = _currentMapType == MapType.normal ? MapType.satellite : MapType.normal;
+    });
+  }
+
+  /// 📌 **تحريك الكاميرا إلى موقع معين**
+  void _moveCamera(LatLng position) {
+    mapController.animateCamera(CameraUpdate.newLatLng(position));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.green,
-        title: const Text('Control Page'),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // النص في أعلى الصفحة
-          const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Center(
-              child: Text(
-                'Monitor waste container levels',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
-                ),
-              ),
-            ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.layers),
+            onPressed: _toggleMapType, // ✅ تغيير نوع الخريطة
           ),
-
-          // عرض الخريطة أسفل النص
-          Expanded(
-            child: GoogleMap(
-              onMapCreated: _onMapCreated,
-              initialCameraPosition: const CameraPosition(
-                target: _center,
-                zoom: 14.0,
-              ),
-              markers: _markers, // إضافة النقاط
-            ),
+          IconButton(
+            icon: const Icon(Icons.add_road),
+            onPressed: _addPolyline, // ✅ رسم المسار بين الحاويات
+          ),
+          IconButton(
+            icon: const Icon(Icons.zoom_in),
+            onPressed: () => mapController.animateCamera(CameraUpdate.zoomIn()),
+          ),
+          IconButton(
+            icon: const Icon(Icons.zoom_out),
+            onPressed: () => mapController.animateCamera(CameraUpdate.zoomOut()),
           ),
         ],
+      ),
+      body: GoogleMap(
+        onMapCreated: (GoogleMapController controller) {
+          mapController = controller;
+        },
+        initialCameraPosition: CameraPosition(target: _currentLocation, zoom: 14.0),
+        markers: _markers,
+        polylines: _polylines,
+        mapType: _currentMapType,
+        myLocationEnabled: true, // ✅ عرض الموقع الحالي
+        zoomControlsEnabled: false, // ❌ إلغاء الأزرار الافتراضية لأننا استخدمنا أزرار مخصصة
+        onTap: _onMapTapped, // ✅ إضافة ماركر وحفظه في Firebase
       ),
     );
   }

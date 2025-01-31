@@ -2,20 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // استيراد Firebase Auth
 import 'HomePage.dart'; // استيراد الصفحة الرئيسية
 
-class SignInPage extends StatefulWidget {
+class LogIn extends StatefulWidget {
   @override
   _SignInPageState createState() => _SignInPageState();
 }
 
-class _SignInPageState extends State<SignInPage> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+class _SignInPageState extends State<LogIn> {
+  final TextEditingController _idController = TextEditingController(); // معرف المستخدم (ID)
+  final TextEditingController _emailController = TextEditingController(); // البريد الإلكتروني
+  final TextEditingController _passwordController = TextEditingController(); // كلمة المرور
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Sign In', style: TextStyle(color: Colors.white)),
+        title: Text('LogIn', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.green,
       ),
       backgroundColor: Colors.white,
@@ -30,7 +31,18 @@ class _SignInPageState extends State<SignInPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // 1. الإيميل
+                // 1. إدخال معرف المستخدم (ID)
+                TextField(
+                  controller: _idController,
+                  decoration: InputDecoration(
+                    labelText: 'Enter your ID',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number, // السماح بإدخال الأرقام فقط
+                ),
+                SizedBox(height: 16),
+
+                // 2. إدخال البريد الإلكتروني
                 TextField(
                   controller: _emailController,
                   decoration: InputDecoration(
@@ -40,7 +52,7 @@ class _SignInPageState extends State<SignInPage> {
                 ),
                 SizedBox(height: 16),
 
-                // 2. كلمة المرور
+                // 3. إدخال كلمة المرور
                 TextField(
                   controller: _passwordController,
                   obscureText: true,
@@ -53,11 +65,12 @@ class _SignInPageState extends State<SignInPage> {
 
                 ElevatedButton(
                   onPressed: () async {
-                    String email = _emailController.text;
-                    String password = _passwordController.text;
+                    String id = _idController.text.trim();
+                    String email = _emailController.text.trim();
+                    String password = _passwordController.text.trim();
 
                     // تحقق من أن الحقول ليست فارغة
-                    if (email.isNotEmpty && password.isNotEmpty) {
+                    if (id.isNotEmpty && email.isNotEmpty && password.isNotEmpty) {
                       try {
                         // محاولة تسجيل الدخول باستخدام Firebase Auth
                         UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -78,17 +91,17 @@ class _SignInPageState extends State<SignInPage> {
                       } catch (e) {
                         // عرض رسالة خطأ إذا فشل تسجيل الدخول
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('فشل في تسجيل الدخول: $e')),
+                          SnackBar(content: Text('Login failed: $e')),
                         );
                       }
                     } else {
                       // عرض رسالة خطأ إذا كانت الحقول فارغة
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('يرجى ملء جميع الحقول')),
+                        SnackBar(content: Text('Please fill in all the fields')),
                       );
                     }
                   },
-                  child: Text('SIGN IN'),
+                  child: Text('LogIn'),
                   style: ElevatedButton.styleFrom(
                     padding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 40),
                     backgroundColor: Colors.green,

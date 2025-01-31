@@ -1,165 +1,182 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // بيانات الشركة أو البلدية المدخلة عند التسجيل
-    const String companyName = 'EcoWize Municipality';
-    const String companyLogoUrl = 'https://example.com/logo.png'; // صورة الشعار
-    const String companyAddress = '123 Green Street, EcoCity';
-    const String companyPhone = '+123 456 789';
-    const String companyEmail = 'contact@ecowize.com';
-    const String companyDescription =
-        'An eco-friendly municipality focused on sustainability.';
-    const String foundationDate = 'January 1, 1990';
+  _ProfilePageState createState() => _ProfilePageState();
+}
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile Page'),
-        backgroundColor: Colors.green,
-        elevation: 0,
+class _ProfilePageState extends State<ProfilePage> {
+  // بيانات قابلة للتعديل
+  String companyName = 'EcoWize Municipality';
+  String companyAddress = '123 Green Street, EcoCity';
+  String companyPhone = '+123 456 789';
+  String companyEmail = 'contact@ecowize.com';
+  String companyDescription = 'An eco-friendly municipality focused on sustainability.';
+  String foundationDate = 'January 1, 2025';
+
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // 📌 **تحميل البيانات من Firebase**
+  Future<void> _loadData() async {
+    DocumentSnapshot snapshot = await _firestore.collection('companies').doc('eco_wize').get();
+    if (snapshot.exists) {
+      setState(() {
+        companyName = snapshot['name'];
+        companyAddress = snapshot['address'];
+        companyPhone = snapshot['phone'];
+        companyEmail = snapshot['email'];
+        companyDescription = snapshot['description'];
+        foundationDate = snapshot['foundationDate'];
+      });
+    }
+  }
+
+  // 📌 **حفظ البيانات إلى Firebase**
+  Future<void> _saveData() async {
+    await _firestore.collection('companies').doc('eco_wize').set({
+      'name': companyName,
+      'address': companyAddress,
+      'phone': companyPhone,
+      'email': companyEmail,
+      'description': companyDescription,
+      'foundationDate': foundationDate,
+    });
+  }
+
+  // 📌 **حوار تعديل البيانات**
+  void _editField(String title, String currentValue, Function(String) onSave) {
+    TextEditingController controller = TextEditingController(text: currentValue);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Edit $title'),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(hintText: 'Enter new $title'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              onSave(controller.text);
+              Navigator.pop(context);
+              _saveData(); // حفظ البيانات بعد التعديل
+            },
+            child: const Text('Save'),
+          ),
+        ],
       ),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData(); // تحميل البيانات عند بدء التطبيق
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // عرض الشعار
-              CircleAvatar(
+              const CircleAvatar(
                 radius: 60,
-                backgroundImage: AssetImage('assets/images/logoo.png'), // الصورة المحلية
+                backgroundImage: AssetImage('assets/images/logoo.png'),
               ),
               const SizedBox(height: 20),
 
-              // عرض اسم الشركة أو البلدية
-              Text(
-                companyName,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 8),
+              // ✅ **إمكانية تعديل الاسم**
+              _buildEditableField('Company Name', companyName, (value) {
+                setState(() {
+                  companyName = value;
+                });
+              }),
 
-              // عرض الوصف
-              Text(
-                companyDescription,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
-              ),
+              // ✅ **إمكانية تعديل الوصف**
+              _buildEditableField('Description', companyDescription, (value) {
+                setState(() {
+                  companyDescription = value;
+                });
+              }),
+
               const SizedBox(height: 20),
 
-              // عرض معلومات الاتصال
+              // ✅ **معلومات الاتصال القابلة للتعديل**
               Card(
                 elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Contact Information:',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on, color: Colors.green),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              companyAddress,
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.phone, color: Colors.green),
-                          const SizedBox(width: 8),
-                          Text(
-                            companyPhone,
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.email, color: Colors.green),
-                          const SizedBox(width: 8),
-                          Text(
-                            companyEmail,
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ],
-                      ),
+                      _buildEditableField('Address', companyAddress, (value) {
+                        setState(() {
+                          companyAddress = value;
+                        });
+                      }),
+                      const Divider(),
+                      _buildEditableField('Phone', companyPhone, (value) {
+                        setState(() {
+                          companyPhone = value;
+                        });
+                      }),
+                      const Divider(),
+                      _buildEditableField('Email', companyEmail, (value) {
+                        setState(() {
+                          companyEmail = value;
+                        });
+                      }),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 20),
 
-              // عرض تاريخ التأسيس
+              // ✅ **عرض تاريخ التأسيس**
               Card(
                 elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 child: ListTile(
                   leading: const Icon(Icons.date_range, color: Colors.green),
                   title: const Text('Established'),
                   subtitle: Text(foundationDate),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.grey),
+                    onPressed: () => _editField('Foundation Date', foundationDate, (value) {
+                      setState(() {
+                        foundationDate = value;
+                      });
+                    }),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
-
-              // أزرار لتعديل البيانات
-              ElevatedButton.icon(
-                onPressed: () {
-                  // الانتقال إلى صفحة تعديل البيانات
-                },
-                icon: const Icon(Icons.edit, color: Colors.white),
-                label: const Text('Edit Profile'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  // الانتقال إلى صفحة تعديل كلمة المرور
-                },
-                icon: const Icon(Icons.lock, color: Colors.white),
-                label: const Text('Change Password'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                ),
-              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  /// 📌 **ودجت قابلة للتعديل**
+  Widget _buildEditableField(String title, String value, Function(String) onSave) {
+    return ListTile(
+      leading: const Icon(Icons.edit, color: Colors.green),
+      title: Text(title),
+      subtitle: Text(value),
+      trailing: const Icon(Icons.edit, color: Colors.grey),
+      onTap: () => _editField(title, value, onSave),
     );
   }
 }

@@ -1,26 +1,13 @@
-// ignore: file_names
+import 'package:eco_wize/pages/WasteCollectionPlanPage.dart';
 import 'package:flutter/material.dart';
-import 'sign_in_page.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'ControlPage.dart';
 import 'ProfilePage.dart';
 import 'SupportPage.dart';
 import 'SettingsPage.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: HomePage(),
-    );
-  }
-}
+import 'LogIn.dart';
+import 'AddEmployeePage.dart';
+import 'Home.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -29,60 +16,30 @@ class HomePage extends StatefulWidget {
   _HomePageState createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 0; // لمؤشر الأيقونة المحددة
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+  late TabController _tabController; // التحكم في التابات
 
-// دالة لتغيير الأيقونة المحددة
-  void _onItemTapped(int index) {
-// إذا كانت الصفحة التي تم النقر عليها هي نفس الصفحة الحالية، لا تفعل شيئًا
-    if (_selectedIndex == index) return;
-
-    setState(() {
-      _selectedIndex = index;
-    });
-
-// التنقل إلى الصفحة المناسبة بناءً على الفهرس
-    switch (index) {
-      case 0:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SystemStatus()),
-        );
-        break;
-      case 1:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ControlPage()),
-        );
-        break;
-      case 2:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ProfilePage()),
-        );
-        break;
-      case 3:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SupportPage()),
-        );
-        break;
-      case 4:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SettingsPage()),
-        );
-        break;
-    }
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 5, vsync: this); // تحديد عدد التابات
   }
 
-  final List<Widget> _widgetOptions = <Widget>[
-    const SystemStatus(),
-    const ControlPage(),
-    const ProfilePage(),
-    const SupportPage(),
-    const SettingsPage(),
-  ];
+  @override
+  void dispose() {
+    _tabController.dispose(); // التأكد من التخلص من التاب كونترولر عند الخروج
+    super.dispose();
+  }
+
+  // دالة لفتح الرابط
+  Future<void> _openLink(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,21 +48,15 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: Colors.green,
         title: const Text(
           'EcoWize',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 22,
-          ),
+          style: TextStyle(color: Colors.white, fontSize: 22),
         ),
         centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.list),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const WasteClassificationPage()),
-              );
+              // عندما يتم الضغط على الأيقونة، نعرض نافذة منبثقة
+              _showActionDialog(context);
             },
           ),
         ],
@@ -114,14 +65,29 @@ class _HomePageState extends State<HomePage> {
           onPressed: () {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => SignInPage()),
+              MaterialPageRoute(builder: (context) => LogIn()),
             );
-            print('تسجيل الخروج');
+            print('Log out');
           },
         ),
       ),
-      body: _widgetOptions.elementAt(_selectedIndex),
+      body: TabBarView(
+        controller: _tabController, // ربط التاب بار في الفيو
+        children: const [
+          Home(),
+          ControlPage(),
+          ProfilePage(),
+          SupportPage(),
+          SettingsPage(),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _tabController.index, // تعيين التاب الحالي
+        onTap: (int index) {
+          setState(() {
+            _tabController.index = index; // تغيير التاب عند الضغط
+          });
+        },
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
@@ -144,109 +110,70 @@ class _HomePageState extends State<HomePage> {
             label: 'Settings',
           ),
         ],
-        currentIndex: _selectedIndex,
         selectedItemColor: Colors.green,
         unselectedItemColor: const Color.fromARGB(255, 21, 53, 22),
-        showSelectedLabels: true,
-        showUnselectedLabels: true,
-        onTap:
-        _onItemTapped, // عند النقر على الأيقونة يتم الانتقال إلى الصفحة المناسبة
       ),
     );
   }
-}
 
-class SystemStatus extends StatelessWidget {
-  const SystemStatus({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'System Status',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.green,
-            ),
-          ),
-          const SizedBox(height: 40),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+  // دالة لفتح نافذة منبثقة عند الضغط على الأيقونة
+  void _showActionDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              _statusCard(context, '25', 'Number of full waste bins'),
-              _statusCard(context, '39', 'Number of drones'),
-              _statusCard(context, '8', 'Number of complaints'),
+              ElevatedButton(
+                onPressed: () async {
+                  const url = 'http://esp32.local'; // الرابط الذي تود فتحه
+                  final Uri uri = Uri.parse(url); // تحويل النص إلى URI
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);  // استخدام launchUrl بدلاً من launch
+                  } else {
+                    throw 'Could not launch $url';
+                  }
+                },
+                child: const Text('Waste Classification'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 40),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => AddEmployeePage()),
+                  );
+                },
+                child: const Text('Add Employee'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 40),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => WasteCollectionPlanPage()),
+                  );
+                },
+                child: const Text('WasteCollectionPlan'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 40),
+                ),
+              ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _statusCard(BuildContext context, String number, String label) {
-    return Card(
-      elevation: 6,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        width: MediaQuery.of(context).size.width *
-            0.25, // عرض البطاقة كنسبة من عرض الشاشة
-        height: 170, // ارتفاع البطاقة
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              number,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.grey[700],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class WasteClassificationPage extends StatelessWidget {
-  const WasteClassificationPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Waste Classification',
-          style: TextStyle(
-            color: Colors.white, // تعيين لون النص إلى الأبيض
-          ),
-        ),
-        backgroundColor: Colors.green,
-      ),
-      body: const Center(
-        child: Text(
-          'Welcome to Waste Classification',
-          style: TextStyle(fontSize: 24),
-        ),
-      ),
+        );
+      },
     );
   }
 }
